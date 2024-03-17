@@ -1,0 +1,148 @@
+
+//+------------------------------------------------------------------+
+//|                                                    MA Sniper Dashboard                                         |
+//|                                 Copyright 2021, Forex Robot Easy Team                     |
+//|                                           https://www.forexroboteasy.com                           |
+//+------------------------------------------------------------------+
+
+//--- Indicator settings
+#property indicator_chart_window
+#property indicator_buffers 2
+#property indicator_color1 Red
+#property indicator_color2 Lime
+
+//--- Indicator buffers
+double ExtMapBuffer1[];
+double ExtMapBuffer2[];
+
+//--- Input parameters
+extern int MA_Period = 14;
+
+//--- Global variables
+int hideDashboard = 0;
+
+//+------------------------------------------------------------------+
+//| Custom indicator initialization function                                   |
+//+------------------------------------------------------------------+
+int OnInit()
+{
+   //--- Indicator buffers mapping
+   SetIndexBuffer(0, ExtMapBuffer1);
+   SetIndexBuffer(1, ExtMapBuffer2);
+   
+   //--- Indicator short name
+   IndicatorSetString(INDICATOR_SHORTNAME, 'MA Sniper Dashboard');
+   
+   return(INIT_SUCCEEDED);
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator iteration function                                                |
+//+------------------------------------------------------------------+
+int OnCalculate(const int rates_total, const int prev_calculated, const datetime &time[],
+                const double &open[], const double &high[], const double &low[], const double &close[],
+                const long &tick_volume[], const long &volume[], const int &spread[])
+{
+   //--- Check if dashboard should be hidden
+   if (hideDashboard == 1)
+   {
+      ExtMapBuffer1[0] = 0;
+      ExtMapBuffer2[0] = 0;
+      return(rates_total);
+   }
+   
+   //--- Calculate moving average
+   ArraySetAsSeries(close, true);
+   double ma = iMA(Symbol(), 0, MA_Period, 0, MODE_SMA, PRICE_CLOSE, 0);
+   
+   //--- Determine bullish or bearish signal
+   if (close[0] > ma)
+   {
+      ExtMapBuffer1[0] = close[0];
+      ExtMapBuffer2[0] = 0;
+   }
+   else
+   {
+      ExtMapBuffer1[0] = 0;
+      ExtMapBuffer2[0] = close[0];
+   }
+   
+   return(rates_total);
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator properties function                                                |
+//+------------------------------------------------------------------+
+bool IndicatorProperties(const int prop_id, const int prop_modifier,
+                         string &prop_value)
+{
+   switch(prop_id)
+   {
+      case INDICATOR_PROPERTY_HIDE:
+         if(hideDashboard == 1)
+            prop_value = 'True';
+         else
+            prop_value = 'False';
+         return(true);
+   }
+   return(false);
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator inputs function                                                            |
+//+------------------------------------------------------------------+
+bool IndicatorInputs(int &input_id)
+{
+   switch(input_id)
+   {
+      case 0:
+         input_id++;
+         IndicatorSetInteger(INDICATOR_DIGITS, 4);
+         IndicatorSetInteger(INDICATOR_MINIMUM, 0);
+         IndicatorSetInteger(INDICATOR_MAXIMUM, 1);
+         IndicatorSetString(INDICATOR_LEVELS, 'Off, On');
+         IndicatorSetString(INDICATOR_LEVELS_TOOLTIP, 'Hide or show the dashboard');
+         return(true);
+   }
+   return(false);
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator outputs function                                                            |
+//+------------------------------------------------------------------+
+bool IndicatorOutputs(int &output_id)
+{
+   switch(output_id)
+   {
+      case 0:
+         output_id++;
+         IndicatorSetString(INDICATOR_OUTPUT, 'Bullish');
+         IndicatorSetString(INDICATOR_OUTPUT_TOOLTIP, 'Bullish signal');
+         return(true);
+      case 1:
+         output_id++;
+         IndicatorSetString(INDICATOR_OUTPUT, 'Bearish');
+         IndicatorSetString(INDICATOR_OUTPUT_TOOLTIP, 'Bearish signal');
+         return(true);
+   }
+   return(false);
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator subwindow function                                                     |
+//+------------------------------------------------------------------+
+bool IndicatorChartEvent(const int id, const long &lparam,
+                         const double &dparam, const string &sparam)
+{
+   if(id == CHARTEVENT_OBJECT_CLICK)
+   {
+      //--- Check if arrow button is clicked
+      if(StringFind(sparam, 'ArrowButton') >= 0)
+      {
+         //--- Toggle hide/show dashboard
+         hideDashboard = 1 - hideDashboard;
+         IndicatorRedraw();
+      }
+   }
+   return(false);
+}
